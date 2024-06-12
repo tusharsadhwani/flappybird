@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import random
 from time import sleep
 from typing import Iterator, TypeVar
 import pygame
@@ -12,6 +13,8 @@ from pygame._sdl2 import Window, Texture, Renderer
 ASSERTS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 WINDOW_SIZE = pygame.display.set_mode().get_size()
 SPRITE_SCALE = 0.2
+# frames after which to spawn a new pipe
+PIPE_SPAWN_DISTANCE = 100
 
 
 def load_image(filename: str) -> pygame.Surface:
@@ -30,6 +33,11 @@ def vh(percent: int) -> float:
     return height * percent / 100
 
 
+BIRD_TERMINAL_VELOCITY = vh(2.5)
+PIPE_GAP = vh(40)
+PIPE_SPAWN_POSITION = vw(90)
+
+
 def create_bird() -> Window:
     image = load_image("bird.png")
 
@@ -37,15 +45,20 @@ def create_bird() -> Window:
     width = vh(image.get_width() * SPRITE_SCALE)
     height = vh(image.get_height() * SPRITE_SCALE)
 
-    window = Window("bird", size=(width, height), always_on_top=True)
-    renderer = Renderer(window)
+    bird = Window(
+        "bird",
+        size=(width, height),
+        position=(vw(10), vh(50)),
+        always_on_top=True,
+    )
+    renderer = Renderer(bird)
     image_texture = Texture.from_surface(renderer, image)
 
     renderer.clear()
     image_texture.draw()
     renderer.present()
 
-    return window
+    return bird
 
 
 def create_pipes() -> list[Window]:
@@ -54,10 +67,33 @@ def create_pipes() -> list[Window]:
 
     # Make the sprite sizes constant with the window height
     width = vh(top_pipe.get_width() * SPRITE_SCALE)
-    top_pipe_height = vh(20)
-    bottom_pipe_height = vh(40)
-    top_pipe_position = (vw(90), 0)
-    bottom_pipe_position = (vw(90), vh(60))
+    top_pipe_height = vh(random.randint(10, 30))
+    bottom_pipe_height = vh(100) - PIPE_GAP - top_pipe_height
+
+    top_pipe_position = (PIPE_SPAWN_POSITION, 0)
+    bottom_pipe_position = (PIPE_SPAWN_POSITION, top_pipe_height + PIPE_GAP)
+
+    # pipe images must be cropped to the size of the window
+    image_width, image_height = top_pipe.get_size()
+    cropped_top_pipe_height = top_pipe_height * (image_width / width)
+    assert cropped_top_pipe_height < image_height
+    image_width, image_height = bottom_pipe.get_size()
+    cropped_bottom_pipe_height = bottom_pipe_height * (image_width / width)
+    assert cropped_bottom_pipe_height < image_height
+
+    # crop the top pipe image to that height from the bottom
+    cropped_top_pipe = pygame.Surface((image_width, cropped_top_pipe_height))
+    cropped_top_pipe.blit(
+        top_pipe,
+        (0, 0),
+        (0, image_height - cropped_top_pipe_height, image_width, image_height),
+    )
+    cropped_bottom_pipe = pygame.Surface((image_width, cropped_bottom_pipe_height))
+    cropped_bottom_pipe.blit(
+        bottom_pipe,
+        (0, 0),
+        (0, 0, image_width, cropped_bottom_pipe_height),
+    )
 
     top_pipe_window = Window(
         "top pipe",
@@ -66,7 +102,7 @@ def create_pipes() -> list[Window]:
         always_on_top=True,
     )
     renderer = Renderer(top_pipe_window)
-    image_texture = Texture.from_surface(renderer, top_pipe)
+    image_texture = Texture.from_surface(renderer, cropped_top_pipe)
 
     renderer.clear()
     image_texture.draw()
@@ -79,7 +115,7 @@ def create_pipes() -> list[Window]:
         always_on_top=True,
     )
     renderer = Renderer(bottom_pipe_window)
-    image_texture = Texture.from_surface(renderer, bottom_pipe)
+    image_texture = Texture.from_surface(renderer, cropped_bottom_pipe)
 
     renderer.clear()
     image_texture.draw()
@@ -102,12 +138,17 @@ def main() -> None:
     bird = create_bird()
     pipes = create_pipes()
 
-    _, y = bird.position
-    bird.position = (vw(7), y)
     bird.focus()
 
+    frame_count = 0
     bird_speed = 0
     while True:
+        # after every PIPE_SPAWN_DISTANCE frames, spawn new pipes
+        frame_count += 1
+        frame_count %= PIPE_SPAWN_DISTANCE
+        if frame_count == 0:
+            pipes.extend(create_pipes())
+
         # move pipes towards bird
         for pipe_index, pipe in reversed_enumerate(pipes):
             x, y = pipe.position
@@ -120,11 +161,14 @@ def main() -> None:
             pipe.position = x, y
 
         # gravity
-        bird_speed += vh(0.15)
+        bird_speed = min(bird_speed + vh(0.15), BIRD_TERMINAL_VELOCITY)
         x, y = bird.position
         y += bird_speed
+        # ensure we don't go below zero when bird_speed is negative
+        if y < 0:
+            y = 0
         # Exit if you hit the bottom
-        if y >= vh(100):
+        elif y >= vh(100):
             break
 
         bird.position = x, y
@@ -132,7 +176,7 @@ def main() -> None:
         # handle jumps
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                bird_speed = vh(-2.5)
+                bird_speed = -BIRD_TERMINAL_VELOCITY
 
         # smooth 30 fps
         sleep(0.03)
