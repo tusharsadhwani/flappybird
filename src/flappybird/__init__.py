@@ -121,7 +121,8 @@ def create_pipes() -> list[Window]:
     image_texture.draw()
     renderer.present()
 
-    return [top_pipe_window, bottom_pipe_window]
+    top_bound = top_pipe_window.position[1]
+    return [top_pipe_window, bottom_pipe_window], top_bound
 
 
 T = TypeVar("T")
@@ -135,6 +136,7 @@ def reversed_enumerate(items: list[T]) -> Iterator[tuple[int, T]]:
 
 
 def _is_in_bounds(x: int, y: int, x1: int, y1: int, x2: int, y2: int) -> bool:
+    print(f"{x1} <= {x} <= {x2} and {y1} <= {y} <= {y2}")
     return x1 <= x <= x2 and y1 <= y <= y2
 
 
@@ -144,6 +146,7 @@ def _colliding(item1: Window, item2: Window) -> bool:
     (x2, y2), (w2, h2) = item2.position, item2.size
 
     item2_bounding_box = x2, y2, x2 + w2, y2 + h2
+    print("-------------------")
     return (
         # top left corner
         _is_in_bounds(x1, y1, *item2_bounding_box)
@@ -163,7 +166,7 @@ def colliding(item1: Window, item2: Window) -> bool:
 
 def main() -> None:
     bird = create_bird()
-    pipes = create_pipes()
+    pipes, top_bound = create_pipes()
 
     bird.focus()
 
@@ -172,6 +175,7 @@ def main() -> None:
     dead = False
     while not dead:
         # collision detection
+        print("\n")
         for pipe in pipes:
             if colliding(bird, pipe):
                 dead = True
@@ -181,7 +185,8 @@ def main() -> None:
         frame_count += 1
         frame_count %= PIPE_SPAWN_DISTANCE
         if frame_count == 0:
-            pipes.extend(create_pipes())
+            pipes, _ = create_pipes()
+            pipes.extend(pipes)
 
         # move pipes towards bird
         for pipe_index, pipe in reversed_enumerate(pipes):
@@ -198,9 +203,9 @@ def main() -> None:
         bird_speed = min(bird_speed + vh(0.15), BIRD_TERMINAL_VELOCITY)
         x, y = bird.position
         y += bird_speed
-        # ensure we don't go below zero when bird_speed is negative
-        if y < 0:
-            y = 0
+        # ensure we don't go below top_bound when bird_speed is negative
+        if y < top_bound:
+            y = top_bound
         # Exit if you hit the bottom
         elif y >= vh(100):
             dead = True
