@@ -23,7 +23,7 @@ pipx run flappybird
 Start the game:
 
 ```bash
-python -m flappybird
+flappybird
 ```
 
 [video]: https://www.youtube.com/watch?v=sWZJ6kRNw4g
