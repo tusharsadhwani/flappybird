@@ -11,7 +11,7 @@ from pygame._sdl2 import Window, Texture, Renderer
 
 
 ASSERTS_DIR = os.path.join(os.path.dirname(__file__), "assets")
-WINDOW_SIZE = pygame.display.set_mode().get_size()
+WINDOW_SIZE = pygame.display.set_mode(flags=pygame.HIDDEN).get_size()
 SPRITE_SCALE = 0.2
 # frames after which to spawn a new pipe
 PIPE_SPAWN_DISTANCE = 100
