@@ -136,7 +136,6 @@ def reversed_enumerate(items: list[T]) -> Iterator[tuple[int, T]]:
 
 
 def _is_in_bounds(x: int, y: int, x1: int, y1: int, x2: int, y2: int) -> bool:
-    print(f"{x1} <= {x} <= {x2} and {y1} <= {y} <= {y2}")
     return x1 <= x <= x2 and y1 <= y <= y2
 
 
@@ -146,7 +145,6 @@ def _colliding(item1: Window, item2: Window) -> bool:
     (x2, y2), (w2, h2) = item2.position, item2.size
 
     item2_bounding_box = x2, y2, x2 + w2, y2 + h2
-    print("-------------------")
     return (
         # top left corner
         _is_in_bounds(x1, y1, *item2_bounding_box)
@@ -175,7 +173,6 @@ def main() -> None:
     dead = False
     while not dead:
         # collision detection
-        print("\n")
         for pipe in pipes:
             if colliding(bird, pipe):
                 dead = True
@@ -185,8 +182,8 @@ def main() -> None:
         frame_count += 1
         frame_count %= PIPE_SPAWN_DISTANCE
         if frame_count == 0:
-            pipes, _ = create_pipes()
-            pipes.extend(pipes)
+            new_pipes, _ = create_pipes()
+            pipes.extend(new_pipes)
 
         # move pipes towards bird
         for pipe_index, pipe in reversed_enumerate(pipes):
