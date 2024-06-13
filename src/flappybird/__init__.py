@@ -228,11 +228,6 @@ def main() -> None:
         # but capped at 0.01, so you'll be at max speed in ~50 pipes
         sleep(max(0.01, 0.02 - score / 5000))
 
-    for pipe in pipes:
-        pipe.destroy()
-
-    bird.destroy()
-
     score_text = f"Final score: {score}"
     font = pygame.font.SysFont("Arial", FONT_SIZE)
     text_width, text_height = font.size(score_text)
