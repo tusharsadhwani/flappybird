@@ -16,6 +16,11 @@ SPRITE_SCALE = 0.2
 # frames after which to spawn a new pipe
 PIPE_SPAWN_DISTANCE = 100
 
+FONT_SIZE = 32
+PADDING = 32
+BACKGROUND_COLOR = (0, 0, 0)
+TEXT_COLOR = (255, 255, 255)
+
 
 def load_image(filename: str) -> pygame.Surface:
     return pygame.image.load(os.path.join(ASSERTS_DIR, filename))
@@ -36,6 +41,7 @@ def vh(percent: int) -> float:
 BIRD_TERMINAL_VELOCITY = vh(2.5)
 PIPE_GAP = vh(40)
 PIPE_SPAWN_POSITION = vw(90)
+BIRD_SPAWN_POSITION = vw(10)
 
 
 def create_bird() -> Window:
@@ -48,7 +54,7 @@ def create_bird() -> Window:
     bird = Window(
         "bird",
         size=(width, height),
-        position=(vw(10), vh(50)),
+        position=(BIRD_SPAWN_POSITION, vh(50)),
         always_on_top=True,
     )
     renderer = Renderer(bird)
@@ -61,7 +67,7 @@ def create_bird() -> Window:
     return bird
 
 
-def create_pipes() -> list[Window]:
+def create_pipes() -> tuple[list[Window], int]:
     top_pipe = load_image("top_pipe.png")
     bottom_pipe = load_image("bottom_pipe.png")
 
@@ -163,6 +169,8 @@ def colliding(item1: Window, item2: Window) -> bool:
 
 
 def main() -> None:
+    pygame.font.init()
+
     bird = create_bird()
     pipes, top_bound = create_pipes()
 
@@ -170,6 +178,7 @@ def main() -> None:
 
     frame_count = 0
     bird_speed = 0
+    score = 0
     dead = False
     while not dead:
         # collision detection
@@ -193,6 +202,7 @@ def main() -> None:
             if x <= 0:
                 pipe.destroy()
                 del pipes[pipe_index]
+                score += 1
 
             pipe.position = x, y
 
@@ -210,9 +220,44 @@ def main() -> None:
         bird.position = x, y
 
         # handle jumps
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+        for event in pygame.event.get(pygame.KEYDOWN):
+            if event.key == pygame.K_SPACE:
                 bird_speed = -BIRD_TERMINAL_VELOCITY
 
-        # smooth 30 fps
-        sleep(0.03)
+        # speed goes up by 0.0002 == 1% after every score
+        # but capped at 0.01, so you'll be at max speed in ~50 pipes
+        sleep(max(0.01, 0.02 - score / 5000))
+
+    for pipe in pipes:
+        pipe.destroy()
+
+    bird.destroy()
+
+    score_text = f"Final score: {score}"
+    font = pygame.font.SysFont("Arial", FONT_SIZE)
+    text_width, text_height = font.size(score_text)
+    score_window = Window(
+        "final score",
+        always_on_top=True,
+        size=(text_width + PADDING, text_height + PADDING),
+    )
+    text_surface = font.render(score_text, False, TEXT_COLOR)
+    window_surface = pygame.Surface(
+        text_surface.get_rect().inflate(PADDING, PADDING).size
+    )
+    window_surface.fill(BACKGROUND_COLOR)
+    window_surface.blit(
+        text_surface, text_surface.get_rect(center=window_surface.get_rect().center)
+    )
+    renderer = Renderer(score_window)
+    texture = Texture.from_surface(renderer, window_surface)
+    renderer.clear()
+    texture.draw()
+    renderer.present()
+
+    exit = False
+    while not exit:
+        for event in pygame.event.get():
+            if event.type in (pygame.KEYDOWN, pygame.WINDOWCLOSE):
+                exit = True
+                break
