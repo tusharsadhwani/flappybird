@@ -73,7 +73,7 @@ def create_pipes() -> tuple[list[Window], int]:
 
     # Make the sprite sizes constant with the window height
     width = vh(top_pipe.get_width() * SPRITE_SCALE)
-    top_pipe_height = vh(random.randint(10, 30))
+    top_pipe_height = vh(random.randint(10, 50))
     bottom_pipe_height = vh(100) - PIPE_GAP - top_pipe_height
 
     top_pipe_position = (PIPE_SPAWN_POSITION, 0)
