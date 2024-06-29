@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import random
-from time import sleep
+from time import sleep, monotonic
 from typing import Iterator, TypeVar
 import pygame
 from pygame._sdl2 import Window, Texture, Renderer
@@ -181,6 +181,8 @@ def main() -> None:
     score = 0
     dead = False
     while not dead:
+        t0 = monotonic()
+
         # collision detection
         for pipe in pipes:
             if colliding(bird, pipe):
@@ -226,7 +228,8 @@ def main() -> None:
 
         # speed goes up by 0.0002 == 1% after every score
         # but capped at 0.01, so you'll be at max speed in ~50 pipes
-        sleep(max(0.01, 0.02 - score / 5000))
+        t1 = monotonic()
+        sleep(max(0, 0.02 - (t1 - t0)))
 
     score_text = f"Final score: {score}"
     font = pygame.font.SysFont("Arial", FONT_SIZE)
